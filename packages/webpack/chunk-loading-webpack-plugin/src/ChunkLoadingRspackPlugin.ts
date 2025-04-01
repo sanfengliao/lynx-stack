@@ -102,6 +102,8 @@ export class ChunkLoadingRspackPluginImpl {
         if (
           runtimeModule.name === 'require_chunk_loading'
         ) {
+          console.log(runtimeModule.source?.source)
+          console.log('------')
           this.#overrideChunkLoadingRuntimeModule(runtimeModule);
           if (compiler.options.mode === 'development') {
             this.#overrideHMRChunkLoadingRuntimeModule(runtimeModule);
@@ -137,6 +139,7 @@ export class ChunkLoadingRspackPluginImpl {
       // withOnChunkLoad
       Buffer.from(JavaScriptRuntimeModule.generateChunkOnloadRuntime()),
     ]);
+    console.log(runtimeModule.source?.source.toString())
   }
 
   #overrideHMRChunkLoadingRuntimeModule(

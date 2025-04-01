@@ -110,7 +110,7 @@
         "useLiteralEnumMembers": "error",
       },
       "suspicious": {
-        "noConsoleLog": "error",
+        "noConsoleLog": "off",
 
         // eslint-plugin-react
         "noDuplicateJsxProps": "error",

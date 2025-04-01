@@ -173,12 +173,17 @@ function createLazyResolver(context: string, conditionNames: string[]) {
   ) => {
     const { default: resolver } = await import('enhanced-resolve')
 
-    return (
-      (lazyExports ??= {})[request] ??=
-        (resolverLazy ??= resolver.create.sync({ conditionNames }))(
-          context,
-          request,
-        )
-    )
+    // 确保缓存对象已初始化
+    lazyExports ??= {}
+
+    // 如果请求未被缓存，则解析并存储结果
+    if (lazyExports[request] === undefined) {
+      // 确保解析器已初始化
+      resolverLazy ??= resolver.create.sync({ conditionNames })
+      // 解析请求并缓存结果
+      lazyExports[request] = resolverLazy(context, request)
+    }
+
+    return lazyExports[request]
   }
 }

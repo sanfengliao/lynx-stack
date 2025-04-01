@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useState } from '@lynx-js/react';
+import { useCallback, useEffect, useState, lazy } from '@lynx-js/react';
 
 import './App.css';
 import arrow from './assets/arrow.png';
 import lynxLogo from './assets/lynx-logo.png';
 import reactLynxLogo from './assets/react-logo.png';
+
+const LazyTest = lazy(() => import('./Test.jsx'))
 
 export function App() {
   const [alterLogo, setAlterLogo] = useState(false);
@@ -20,6 +22,7 @@ export function App() {
   return (
     <view>
       <view className='Background' />
+      <LazyTest />
       <view className='App'>
         <view className='Banner'>
           <view className='Logo' bindtap={onTap}>

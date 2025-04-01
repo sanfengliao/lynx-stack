@@ -142,7 +142,7 @@ export class LynxEncodePluginImpl {
       }, async (args) => {
         const { encodeData } = args;
         const { manifest } = encodeData;
-
+        // 删除临时文件.rspeedy/目录下的文件
         if (!isDebug() && !isDev && !isRsdoctor()) {
           templateHooks.beforeEmit.tap(this.name, (args) => {
             this.deleteDebuggingAssets(compilation, [
@@ -193,6 +193,7 @@ export class LynxEncodePluginImpl {
         return args;
       });
 
+      // 将看起来把js代码转成字节码
       templateHooks.encode.tapPromise({
         name: this.name,
         stage: LynxEncodePlugin.ENCODE_STAGE,
@@ -216,9 +217,10 @@ export class LynxEncodePluginImpl {
    * The deleteDebuggingAssets delete all the assets that are inlined into the template.
    */
   deleteDebuggingAssets(
-    compilation: Compilation,
+    _compilation: Compilation,
     assets: ({ name: string } | undefined)[],
   ): void {
+
     assets
       .filter(asset => asset !== undefined)
       .forEach(asset => deleteAsset(asset));

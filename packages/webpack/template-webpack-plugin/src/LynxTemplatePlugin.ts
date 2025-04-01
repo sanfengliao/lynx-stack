@@ -482,6 +482,7 @@ class LynxTemplatePluginImpl {
 
     this.hash = createHash(compiler.options.output.hashFunction ?? 'xxhash64');
 
+    // 获取所有entry chunk并打包称一个的lynx.bundle
     compiler.hooks.initialize.tap(this.name, () => {
       // entryName to fileName conversion function
       const userOptionFilename = this.#options.filename;
@@ -536,6 +537,7 @@ class LynxTemplatePluginImpl {
       });
     });
 
+   
     compiler.hooks.thisCompilation.tap(this.name, compilation => {
       const onceForChunkSet = new WeakSet<Chunk>();
       const LynxAsyncChunksRuntimeModule = createLynxAsyncChunksRuntimeModule(
@@ -565,6 +567,7 @@ class LynxTemplatePluginImpl {
         );
       });
 
+       // 获取异步的chunk，并将他们的main thread chunk和background thread chunk打包成一个lynx.bundle
       compilation.hooks.processAssets.tapPromise({
         name: this.name,
         stage:
@@ -599,6 +602,12 @@ class LynxTemplatePluginImpl {
     }
   }
 
+  /**
+   * 
+   * @param _compiler 
+   * @param compilation 
+   * @param filenameTemplate 
+   */
   async #generateTemplate(
     _compiler: Compiler,
     compilation: Compilation,
@@ -606,17 +615,20 @@ class LynxTemplatePluginImpl {
   ) {
     // Get all entry point names for this template file
     const entryNames = Array.from(compilation.entrypoints.keys());
+    // 获取entry对应的chunk
     const filteredEntryNames = this.#filterEntryChunks(
       entryNames,
       this.#options.chunks,
       this.#options.excludeChunks,
     );
 
+    // 提取entry对应的assets信息
     const assetsInfoByGroups = this.#getAssetsInformationByGroups(
       compilation,
       filteredEntryNames,
     );
 
+    // 根据chunk生成二进制bundle
     await this.#encodeByAssetsInformation(
       compilation,
       assetsInfoByGroups,
@@ -632,6 +644,11 @@ class LynxTemplatePluginImpl {
     Record<string, ChunkGroup[]>
   >();
 
+  /**
+   * 获取异步的chunk
+   * @param compilation 
+   * @returns 
+   */
   #getAsyncChunkGroups(compilation: Compilation) {
     let asyncChunkGroups = LynxTemplatePluginImpl.#asyncChunkGroups.get(
       compilation,
@@ -654,6 +671,11 @@ class LynxTemplatePluginImpl {
     return asyncChunkGroups;
   }
 
+  /**
+   * 获取最终bundle的路径
+   * @param filename 
+   * @returns 
+   */
   #getAsyncFilenameTemplate(filename: string) {
     return this.#options.lazyBundleFilename.replace(
       /\[name\]/,
@@ -663,7 +685,12 @@ class LynxTemplatePluginImpl {
 
   static #encodedTemplate = new WeakMap<Compilation, Set<string>>();
 
+  /**
+   * 生成异步chunk的bundle
+   * @param compilation
+   */
   async #generateAsyncTemplate(compilation: Compilation) {
+    // 获取异步chunk，每一个异步chunk都会有main thread chunk和background thread chunk
     const asyncChunkGroups = this.#getAsyncChunkGroups(compilation);
 
     const intermediateRoot = path.dirname(this.#options.intermediate);
@@ -681,6 +708,8 @@ class LynxTemplatePluginImpl {
 
     await Promise.all(
       Object.entries(asyncChunkGroups).map(([entryName, chunkGroups]) => {
+        // main thread chunk和background thread chunk 的内容会打包到一个二进制bundle中
+        // 所以这里只需要获取一个bundle的名称
         const chunkNames =
           // We use the chunk name(provided by `webpackChunkName`) as filename
           chunkGroups
@@ -703,6 +732,7 @@ class LynxTemplatePluginImpl {
 
         encodedTemplate.add(filenameTemplate);
 
+        // 获取chunk对应的assets信息
         const asyncAssetsInfoByGroups = this.#getAssetsInformationByFilenames(
           compilation,
           chunkGroups.flatMap(cg => cg.getFiles()),
@@ -720,6 +750,7 @@ class LynxTemplatePluginImpl {
     );
   }
 
+  // 将chunk打包称一个的lynx.bundle, 包括css, js(background thread chunk)和lepus(main thread chunk)
   async #encodeByAssetsInformation(
     compilation: Compilation,
     assetsInfoByGroups: AssetsInformationByGroups,
@@ -801,11 +832,13 @@ class LynxTemplatePluginImpl {
         ...css,
         chunks: assetsInfoByGroups.css,
       },
+      // main thread chunk
       lepusCode: {
         // TODO: support multiple lepus chunks
         root: assetsInfoByGroups.lepus[0],
         chunks: [],
       },
+      // background thread chunk
       manifest: Object.fromEntries(
         assetsInfoByGroups.js.map(asset => {
           return [asset.name, asset.source.source().toString()];
@@ -817,6 +850,7 @@ class LynxTemplatePluginImpl {
       compilation,
     );
 
+    // 预处理信息，会跟bundle代码注入一些额外的代码
     const { encodeData } = await hooks.beforeEncode.promise({
       encodeData: encodeRawData,
       filenameTemplate,
@@ -887,6 +921,7 @@ class LynxTemplatePluginImpl {
     }
 
     try {
+      // 编码成二进制字节码
       const { buffer, debugInfo } = await hooks.encode.promise({
         encodeOptions: resolvedEncodeOptions,
         intermediate,
@@ -979,6 +1014,12 @@ class LynxTemplatePluginImpl {
     return this.#getAssetsInformationByFilenames(compilation, filenames);
   }
 
+  /**
+   * 根据输出的文件名，获取对应chunk的asset信息, 包括js(background thread chunk), lepus(main thread chunk), css三种类型
+   * @param compilation 
+   * @param filenames 
+   * @returns 
+   */
   #getAssetsInformationByFilenames(
     compilation: Compilation,
     filenames: string[],

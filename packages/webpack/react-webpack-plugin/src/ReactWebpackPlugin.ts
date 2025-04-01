@@ -297,6 +297,7 @@ class ReactWebpackPlugin {
         }
 
         // We inject `module.exports` for each async template.
+        // 给异步的chunk前后注入一些代码，`module.exports`相关的代码
         compilation.updateAsset(
           encodeData.lepusCode.root.name,
           (old) =>
